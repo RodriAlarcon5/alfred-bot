@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: alfred-bot
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN
+        value: 7352152977:AAFOrd-QuwlIhBrF7JG_dUgvBn33TwQe3YQ
