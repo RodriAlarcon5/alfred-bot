@@ -134,10 +134,11 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Conversación cancelada. ¡Hasta luego!")
     return ConversationHandler.END
 
-# Iniciar bot con token desde variable de entorno
+# Token y construcción de la app
 TOKEN = os.environ["BOT_TOKEN"]
 app = ApplicationBuilder().token(TOKEN).build()
 
+# Conversación
 conv = ConversationHandler(
     entry_points=[CommandHandler("start", start)],
     states={
@@ -155,11 +156,12 @@ conv = ConversationHandler(
 
 app.add_handler(conv)
 
-# Ejecutar
+# Ejecutar correctamente en Render o Railway
 async def main():
     await app.initialize()
     await app.start()
-    print("✅ Alfred está corriendo 24/7 desde Railway.")
-    await app.updater.start_polling(drop_pending_updates=True)
+    print("✅ Alfred está corriendo 24/7 en la nube.")
+    await app.stop()  # ⚠️ NO usar polling en Render (no es necesario)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
