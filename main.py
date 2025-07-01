@@ -1,21 +1,23 @@
 import os
 import logging
+import asyncio
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler,
     ContextTypes, filters
 )
 
-# Logging para Render
+# Logging para debug
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
 )
 
 # Estados de conversación
 SELECCION_CIUDAD, VERIFICAR_CIUDAD = range(2)
 SELECCION_CATEGORIA, RECIBIR_IMAGENES, SIGUE_O_NO = range(3, 6)
 
-# Opciones disponibles
+# Opciones
 CIUDADES = {"1": "Ciudad de México", "2": "Guadalajara", "3": "Monterrey"}
 CATEGORIAS = {
     "1": "App Naranja 🍊 – Incentivos",
@@ -23,10 +25,9 @@ CATEGORIAS = {
     "3": "App Negra ⚫ – Desglose de la tarifa del usuario"
 }
 
-# Grupo de destino
 GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))
 
-# Inicia la conversación
+# Funciones de conversación
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     logging.info("Inicio de conversación con usuario.")
     msg = (
@@ -37,7 +38,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(msg, parse_mode="Markdown")
     return SELECCION_CIUDAD
 
-# Guarda ciudad elegida
 async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion in CIUDADES:
@@ -51,7 +51,6 @@ async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text("Por favor escribe un número válido (1, 2 o 3).")
     return SELECCION_CIUDAD
 
-# Verifica la ciudad
 async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text.strip() == "1":
         msg = (
@@ -68,7 +67,6 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text("Por favor responde con 1 o 2.")
         return VERIFICAR_CIUDAD
 
-# Guarda la categoría
 async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion in CATEGORIAS:
@@ -83,7 +81,6 @@ async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await update.message.reply_text("Escribe 1, 2 o 3.")
     return SELECCION_CATEGORIA
 
-# Recibe imágenes y reenvía al grupo
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     categoria = context.user_data.get("categoria", "N/A")
@@ -126,7 +123,6 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Envía una imagen o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
         return RECIBIR_IMAGENES
 
-# Decide si continuar o terminar
 async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion == "1":
@@ -145,18 +141,25 @@ async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text("Por favor escribe 1 o 2.")
         return SIGUE_O_NO
 
-# Cancelar la conversación
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Conversación cancelada. ¡Hasta luego!")
     return ConversationHandler.END
 
-# Arranca la app
+# 🧹 Limpieza de webhooks si existían
+async def limpiar_webhook(app):
+    logging.info("Eliminando webhook previo (si existía)...")
+    await app.bot.delete_webhook(drop_pending_updates=True)
+
+# 🟢 Ejecuta el bot
 if __name__ == "__main__":
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise ValueError("Falta la variable de entorno BOT_TOKEN")
 
     app = ApplicationBuilder().token(token).build()
+
+    # Limpia el webhook antes de iniciar polling
+    asyncio.run(limpiar_webhook(app))
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
