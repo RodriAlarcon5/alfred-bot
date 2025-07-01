@@ -1,9 +1,14 @@
 import os
-import asyncio
+import logging
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler,
     ContextTypes, filters
+)
+
+# Logging para debug en Render
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
 # Estados
@@ -18,29 +23,34 @@ CATEGORIAS = {
     "3": "App Negra ⚫ – Desglose de la tarifa del usuario"
 }
 
-# chat_id del grupo
-GROUP_ID = -1002642749020
+# ID del grupo al que se reenvían los mensajes
+GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logging.info("Inicio de conversación con usuario.")
     msg = (
-        "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
-        "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
+        "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots.\n\n"
+        "Vamos a comenzar. Por favor selecciona la *ciudad donde vives*:\n"
         "1. Ciudad de México\n2. Guadalajara\n3. Monterrey"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
     return SELECCION_CIUDAD
 
+
 async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion in CIUDADES:
         context.user_data["ciudad"] = CIUDADES[seleccion]
+        logging.info(f"Ciudad seleccionada: {CIUDADES[seleccion]}")
         await update.message.reply_text(
-            f"Seleccionaste *{CIUDADES[seleccion]}*, ¿es correcto?\n\n1. Sí, es correcta\n2. No, quiero cambiarla",
+            f"Seleccionaste *{CIUDADES[seleccion]}*, ¿es correcto?\n\n1. Sí\n2. No",
             parse_mode="Markdown"
         )
         return VERIFICAR_CIUDAD
     await update.message.reply_text("Por favor escribe un número válido (1, 2 o 3).")
     return SELECCION_CIUDAD
+
 
 async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text.strip() == "1":
@@ -50,26 +60,28 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             "2. App Negra ⚫ – Incentivos\n"
             "3. App Negra ⚫ – Desglose de la tarifa del usuario"
         )
-        await update.message.reply_text(msg)
-        return SELECCION_CATEGORIA
+        return await update.message.reply_text(msg), SELECCION_CATEGORIA
     elif update.message.text.strip() == "2":
         return await start(update, context)
     else:
         await update.message.reply_text("Por favor responde con 1 o 2.")
         return VERIFICAR_CIUDAD
 
+
 async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion in CATEGORIAS:
         context.user_data["categoria"] = CATEGORIAS[seleccion]
         context.user_data["ya_enviado"] = False
+        logging.info(f"Categoría seleccionada: {CATEGORIAS[seleccion]}")
         await update.message.reply_text(
-            f"Excelente. Adjunta las imágenes de *{CATEGORIAS[seleccion]}*.\nEscribe *Listo* cuando termines.",
+            f"Adjunta las imágenes de *{CATEGORIAS[seleccion]}*.\nEscribe *Listo* cuando termines.",
             parse_mode="Markdown"
         )
         return RECIBIR_IMAGENES
     await update.message.reply_text("Escribe 1, 2 o 3.")
     return SELECCION_CATEGORIA
+
 
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
@@ -87,26 +99,32 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"📍 *Ciudad:* {ciudad}\n"
             f"🗂 *Categoría:* {categoria}"
         )
-        await context.bot.send_message(chat_id=GROUP_ID, text=mensaje_info, parse_mode="Markdown")
-        context.user_data["ya_enviado"] = True
+        try:
+            logging.info(f"Enviando mensaje de info al grupo {GROUP_ID}")
+            await context.bot.send_message(chat_id=GROUP_ID, text=mensaje_info, parse_mode="Markdown")
+            context.user_data["ya_enviado"] = True
+        except Exception as e:
+            logging.error(f"Error enviando mensaje al grupo: {e}")
 
     if update.message.photo:
         file_id = update.message.photo[-1].file_id
-        await context.bot.send_photo(chat_id=GROUP_ID, photo=file_id)
-        await update.message.reply_text("Imagen recibida 👍\nPuedes enviar otra o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
+        try:
+            logging.info(f"Reenviando imagen con file_id: {file_id}")
+            await context.bot.send_photo(chat_id=GROUP_ID, photo=file_id)
+            await update.message.reply_text("Imagen recibida 👍\nPuedes enviar otra o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
+        except Exception as e:
+            logging.error(f"Error enviando imagen al grupo: {e}")
         return RECIBIR_IMAGENES
     elif update.message.text and update.message.text.strip().lower() == "listo":
         context.user_data["ya_enviado"] = False
-        msg = (
-            "¿Quieres adjuntar screenshots para otra categoría?\n\n"
-            "1. Sí, otra categoría\n"
-            "2. No, ya terminé"
+        await update.message.reply_text(
+            "¿Quieres adjuntar screenshots para otra categoría?\n\n1. Sí, otra categoría\n2. No, ya terminé"
         )
-        await update.message.reply_text(msg)
         return SIGUE_O_NO
     else:
         await update.message.reply_text("Envía una imagen o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
         return RECIBIR_IMAGENES
+
 
 async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
@@ -126,12 +144,18 @@ async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text("Por favor escribe 1 o 2.")
         return SIGUE_O_NO
 
+
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Conversación cancelada. ¡Hasta luego!")
     return ConversationHandler.END
 
-async def main():
-    token = os.getenv("TELEGRAM_TOKEN")
+
+# Construcción del bot
+if __name__ == "__main__":
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise ValueError("Falta la variable de entorno BOT_TOKEN")
+    
     app = ApplicationBuilder().token(token).build()
 
     conv = ConversationHandler(
@@ -150,11 +174,6 @@ async def main():
     )
 
     app.add_handler(conv)
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    print("✅ Alfred está activo.")
-    await app.updater.idle()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    logging.info("✅ Alfred está corriendo en Render.")
+    app.run_polling()
