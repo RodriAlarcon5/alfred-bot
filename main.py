@@ -71,9 +71,7 @@ async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text and update.message.text.lower() == "listo":
-        await update.message.reply_text(
-            "¿Deseas subir otra categoría?\n1. Sí\n2. No"
-        )
+        await update.message.reply_text("¿Deseas subir otra categoría? (si/no)")
         return SIGUE_O_NO
 
     if update.message.photo:
@@ -84,16 +82,14 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"{context.user_data['categoria']}"
         )
         await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
-        await update.message.reply_text("📸 Imagen enviada correctamente.")
+        await update.message.reply_text("📸 Imagen enviada correctamente. Puedes enviar otra o escribe Listo si ya terminaste")
     else:
         await update.message.reply_text("Envía una imagen o escribe 'listo' si ya terminaste.")
     return RECIBIR_IMAGENES
 
 
-
 async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    texto = update.message.text.strip()
-    if texto == "1":
+    if update.message.text.lower() == "si":
         await update.message.reply_text(
             "Selecciona la categoría:\n"
             "1. App Naranja 🍊 – Incentivos\n"
@@ -101,13 +97,8 @@ async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             "3. App Negra ⚫ – Desglose de la tarifa del usuario"
         )
         return SELECCION_CATEGORIA
-    elif texto == "2":
-        await update.message.reply_text("Gracias por tu ayuda 🙌")
-        return ConversationHandler.END
-    else:
-        await update.message.reply_text("Selecciona una opción válida:\n1. Sí\n2. No")
-        return SIGUE_O_NO
-
+    await update.message.reply_text("Gracias por tu ayuda 🙌")
+    return ConversationHandler.END
 
 
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
