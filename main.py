@@ -6,16 +6,16 @@ from telegram.ext import (
     ContextTypes, filters
 )
 
-# Logging para debug en Render
+# Logging para Render
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
-# Estados
+# Estados de conversación
 SELECCION_CIUDAD, VERIFICAR_CIUDAD = range(2)
 SELECCION_CATEGORIA, RECIBIR_IMAGENES, SIGUE_O_NO = range(3, 6)
 
-# Opciones
+# Opciones disponibles
 CIUDADES = {"1": "Ciudad de México", "2": "Guadalajara", "3": "Monterrey"}
 CATEGORIAS = {
     "1": "App Naranja 🍊 – Incentivos",
@@ -23,10 +23,10 @@ CATEGORIAS = {
     "3": "App Negra ⚫ – Desglose de la tarifa del usuario"
 }
 
-# ID del grupo al que se reenvían los mensajes
+# Grupo de destino
 GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))
 
-
+# Inicia la conversación
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     logging.info("Inicio de conversación con usuario.")
     msg = (
@@ -37,7 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(msg, parse_mode="Markdown")
     return SELECCION_CIUDAD
 
-
+# Guarda ciudad elegida
 async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion in CIUDADES:
@@ -51,7 +51,7 @@ async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text("Por favor escribe un número válido (1, 2 o 3).")
     return SELECCION_CIUDAD
 
-
+# Verifica la ciudad
 async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text.strip() == "1":
         msg = (
@@ -60,14 +60,15 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             "2. App Negra ⚫ – Incentivos\n"
             "3. App Negra ⚫ – Desglose de la tarifa del usuario"
         )
-        return await update.message.reply_text(msg), SELECCION_CATEGORIA
+        await update.message.reply_text(msg)
+        return SELECCION_CATEGORIA
     elif update.message.text.strip() == "2":
         return await start(update, context)
     else:
         await update.message.reply_text("Por favor responde con 1 o 2.")
         return VERIFICAR_CIUDAD
 
-
+# Guarda la categoría
 async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion in CATEGORIAS:
@@ -82,7 +83,7 @@ async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await update.message.reply_text("Escribe 1, 2 o 3.")
     return SELECCION_CATEGORIA
 
-
+# Recibe imágenes y reenvía al grupo
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.message.from_user
     categoria = context.user_data.get("categoria", "N/A")
@@ -125,7 +126,7 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Envía una imagen o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
         return RECIBIR_IMAGENES
 
-
+# Decide si continuar o terminar
 async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion == "1":
@@ -144,18 +145,17 @@ async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text("Por favor escribe 1 o 2.")
         return SIGUE_O_NO
 
-
+# Cancelar la conversación
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Conversación cancelada. ¡Hasta luego!")
     return ConversationHandler.END
 
-
-# Construcción del bot
+# Arranca la app
 if __name__ == "__main__":
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise ValueError("Falta la variable de entorno BOT_TOKEN")
-    
+
     app = ApplicationBuilder().token(token).build()
 
     conv = ConversationHandler(
