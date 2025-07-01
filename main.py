@@ -30,7 +30,10 @@ GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))
 # Funciones del bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
-        "Hola, selecciona tu ciudad:\n1. Ciudad de México\n2. Guadalajara\n3. Monterrey"
+        "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
+        "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
+        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey",
+        parse_mode="Markdown"
     )
     return SELECCION_CIUDAD
 
@@ -41,7 +44,7 @@ async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Selecciona una opción válida: 1, 2 o 3.")
         return SELECCION_CIUDAD
     context.user_data["ciudad"] = CIUDADES[seleccion]
-    await update.message.reply_text("Escribe tu nombre:")
+    await update.message.reply_text("Escribe tu número celular con el que estás registrado en la app:")
     return VERIFICAR_CIUDAD
 
 
