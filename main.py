@@ -1,10 +1,10 @@
+import os
 import asyncio
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler,
     ContextTypes, filters
 )
-import os
 
 # Estados
 SELECCION_CIUDAD, VERIFICAR_CIUDAD = range(2)
@@ -72,17 +72,69 @@ async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return SELECCION_CATEGORIA
 
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    return RECIBIR_IMAGENES
+    user = update.message.from_user
+    categoria = context.user_data.get("categoria", "N/A")
+    ciudad = context.user_data.get("ciudad", "N/A")
+    fecha = update.message.date.strftime("%Y-%m-%d")
 
-async def texto_listo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("¡Gracias! Tus imágenes han sido recibidas.")
+    if not context.user_data.get("ya_enviado", False):
+        nombre = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        username = f"@{user.username}" if user.username else "(sin username)"
+        mensaje_info = (
+            "📤 *Nuevo set de screenshots recibido*\n\n"
+            f"📅 *Fecha:* {fecha}\n"
+            f"👤 *Usuario:* {nombre} ({username})\n"
+            f"📍 *Ciudad:* {ciudad}\n"
+            f"🗂 *Categoría:* {categoria}"
+        )
+        await context.bot.send_message(chat_id=GROUP_ID, text=mensaje_info, parse_mode="Markdown")
+        context.user_data["ya_enviado"] = True
+
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        await context.bot.send_photo(chat_id=GROUP_ID, photo=file_id)
+        await update.message.reply_text("Imagen recibida 👍\nPuedes enviar otra o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
+        return RECIBIR_IMAGENES
+    elif update.message.text and update.message.text.strip().lower() == "listo":
+        context.user_data["ya_enviado"] = False
+        msg = (
+            "¿Quieres adjuntar screenshots para otra categoría?\n\n"
+            "1. Sí, otra categoría\n"
+            "2. No, ya terminé"
+        )
+        await update.message.reply_text(msg)
+        return SIGUE_O_NO
+    else:
+        await update.message.reply_text("Envía una imagen o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
+        return RECIBIR_IMAGENES
+
+async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    seleccion = update.message.text.strip()
+    if seleccion == "1":
+        msg = (
+            "Perfecto. Elige otra categoría:\n\n"
+            "1. App Naranja 🍊 – Incentivos\n"
+            "2. App Negra ⚫ – Incentivos\n"
+            "3. App Negra ⚫ – Desglose de la tarifa del usuario"
+        )
+        await update.message.reply_text(msg)
+        return SELECCION_CATEGORIA
+    elif seleccion == "2":
+        await update.message.reply_text("¡Gracias por tu ayuda! Alfred ha terminado contigo. 🙌")
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Por favor escribe 1 o 2.")
+        return SIGUE_O_NO
+
+async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("Conversación cancelada. ¡Hasta luego!")
     return ConversationHandler.END
 
-def main():
-    TOKEN = os.getenv("TELEGRAM_TOKEN")
-    application = ApplicationBuilder().token(TOKEN).build()
+async def main():
+    token = os.getenv("TELEGRAM_TOKEN")
+    app = ApplicationBuilder().token(token).build()
 
-    conv_handler = ConversationHandler(
+    conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             SELECCION_CIUDAD: [MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_ciudad)],
@@ -90,14 +142,19 @@ def main():
             SELECCION_CATEGORIA: [MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_categoria)],
             RECIBIR_IMAGENES: [
                 MessageHandler(filters.PHOTO, recibir_imagen),
-                MessageHandler(filters.TEXT & filters.Regex("(?i)^listo$"), texto_listo)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_imagen)
             ],
+            SIGUE_O_NO: [MessageHandler(filters.TEXT & ~filters.COMMAND, decidir_siguiente)],
         },
-        fallbacks=[]
+        fallbacks=[CommandHandler("cancel", cancelar)],
     )
 
-    application.add_handler(conv_handler)
-    application.run_polling()
+    app.add_handler(conv)
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    print("✅ Alfred está activo.")
+    await app.updater.idle()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
