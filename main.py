@@ -5,19 +5,12 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler,
     ContextTypes, filters
 )
-import asyncio
 
-# Logging para Render
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
-
-# Estados de conversación
+# Estados
 SELECCION_CIUDAD, VERIFICAR_CIUDAD = range(2)
 SELECCION_CATEGORIA, RECIBIR_IMAGENES, SIGUE_O_NO = range(3, 6)
 
-# Opciones de ciudad y categoría
+# Opciones
 CIUDADES = {"1": "Ciudad de México", "2": "Guadalajara", "3": "Monterrey"}
 CATEGORIAS = {
     "1": "App Naranja 🍊 – Incentivos",
@@ -25,132 +18,98 @@ CATEGORIAS = {
     "3": "App Negra ⚫ – Desglose de la tarifa del usuario"
 }
 
+# ID del grupo
 GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))
 
-# Conversación
+# Logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+
+# Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    logging.info("Inicio de conversación con usuario.")
-    msg = (
-        "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots.\n\n"
-        "Vamos a comenzar. Por favor selecciona la *ciudad donde vives*:\n"
+    await update.message.reply_text(
+        "Hola, soy Alfred 🤖\nSelecciona tu ciudad:\n"
         "1. Ciudad de México\n2. Guadalajara\n3. Monterrey"
     )
-    await update.message.reply_text(msg, parse_mode="Markdown")
     return SELECCION_CIUDAD
 
 async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    seleccion = update.message.text.strip()
-    if seleccion in CIUDADES:
-        context.user_data["ciudad"] = CIUDADES[seleccion]
-        await update.message.reply_text(
-            f"Seleccionaste *{CIUDADES[seleccion]}*, ¿es correcto?\n\n1. Sí\n2. No",
-            parse_mode="Markdown"
-        )
-        return VERIFICAR_CIUDAD
-    await update.message.reply_text("Por favor escribe un número válido (1, 2 o 3).")
-    return SELECCION_CIUDAD
+    texto = update.message.text.strip()
+    if texto not in CIUDADES:
+        await update.message.reply_text("Selecciona una opción válida: 1, 2 o 3.")
+        return SELECCION_CIUDAD
+    context.user_data["ciudad"] = CIUDADES[texto]
+    await update.message.reply_text(f"Seleccionaste {CIUDADES[texto]}.\nEscribe tu nombre:")
+    return VERIFICAR_CIUDAD
 
 async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if update.message.text.strip() == "1":
-        msg = (
-            "¿Qué tipo de screenshots vas a compartir?\n\n"
-            "1. App Naranja 🍊 – Incentivos\n"
-            "2. App Negra ⚫ – Incentivos\n"
-            "3. App Negra ⚫ – Desglose de la tarifa del usuario"
-        )
-        await update.message.reply_text(msg)
-        return SELECCION_CATEGORIA
-    elif update.message.text.strip() == "2":
-        return await start(update, context)
-    else:
-        await update.message.reply_text("Por favor responde con 1 o 2.")
-        return VERIFICAR_CIUDAD
-
-async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    seleccion = update.message.text.strip()
-    if seleccion in CATEGORIAS:
-        context.user_data["categoria"] = CATEGORIAS[seleccion]
-        context.user_data["ya_enviado"] = False
-        await update.message.reply_text(
-            f"Adjunta las imágenes de *{CATEGORIAS[seleccion]}*.\nEscribe *Listo* cuando termines.",
-            parse_mode="Markdown"
-        )
-        return RECIBIR_IMAGENES
-    await update.message.reply_text("Escribe 1, 2 o 3.")
+    context.user_data["nombre"] = update.message.text.strip()
+    await update.message.reply_text(
+        "Selecciona la categoría:\n"
+        "1. App Naranja 🍊 – Incentivos\n"
+        "2. App Negra ⚫ – Incentivos\n"
+        "3. App Negra ⚫ – Desglose de la tarifa del usuario"
+    )
     return SELECCION_CATEGORIA
 
-async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user = update.message.from_user
-    categoria = context.user_data.get("categoria", "N/A")
-    ciudad = context.user_data.get("ciudad", "N/A")
-    fecha = update.message.date.strftime("%Y-%m-%d")
+async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    texto = update.message.text.strip()
+    if texto not in CATEGORIAS:
+        await update.message.reply_text("Selecciona una opción válida: 1, 2 o 3.")
+        return SELECCION_CATEGORIA
+    context.user_data["categoria"] = CATEGORIAS[texto]
+    await update.message.reply_text("Ahora envíame una o más capturas. Cuando termines escribe 'listo'.")
+    return RECIBIR_IMAGENES
 
-    if not context.user_data.get("ya_enviado", False):
-        nombre = f"{user.first_name or ''} {user.last_name or ''}".strip()
-        username = f"@{user.username}" if user.username else "(sin username)"
-        mensaje_info = (
-            "📤 *Nuevo set de screenshots recibido*\n\n"
-            f"📅 *Fecha:* {fecha}\n"
-            f"👤 *Usuario:* {nombre} ({username})\n"
-            f"📍 *Ciudad:* {ciudad}\n"
-            f"🗂 *Categoría:* {categoria}"
-        )
-        try:
-            await context.bot.send_message(chat_id=GROUP_ID, text=mensaje_info, parse_mode="Markdown")
-            context.user_data["ya_enviado"] = True
-        except Exception as e:
-            logging.error(f"Error enviando mensaje al grupo: {e}")
+async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message.text and update.message.text.lower() == "listo":
+        await update.message.reply_text("¿Quieres subir otra categoría? (sí/no)")
+        return SIGUE_O_NO
 
     if update.message.photo:
-        try:
-            file_id = update.message.photo[-1].file_id
-            await context.bot.send_photo(chat_id=GROUP_ID, photo=file_id)
-            await update.message.reply_text("Imagen recibida 👍\nPuedes enviar otra o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
-        except Exception as e:
-            logging.error(f"Error reenviando imagen: {e}")
-        return RECIBIR_IMAGENES
-    elif update.message.text and update.message.text.strip().lower() == "listo":
-        context.user_data["ya_enviado"] = False
-        await update.message.reply_text(
-            "¿Quieres adjuntar screenshots para otra categoría?\n\n1. Sí, otra categoría\n2. No, ya terminé"
+        largest_photo = update.message.photo[-1]
+        caption = f"{context.user_data['nombre']}\n{context.user_data['ciudad']}\n{context.user_data['categoria']}"
+        await context.bot.send_photo(
+            chat_id=GROUP_ID,
+            photo=largest_photo.file_id,
+            caption=caption
         )
-        return SIGUE_O_NO
+        await update.message.reply_text("📸 Imagen recibida.")
     else:
-        await update.message.reply_text("Envía una imagen o escribe *Listo* si ya terminaste.", parse_mode="Markdown")
-        return RECIBIR_IMAGENES
+        await update.message.reply_text("Envía una imagen o escribe 'listo' si ya terminaste.")
+    return RECIBIR_IMAGENES
 
 async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    seleccion = update.message.text.strip()
-    if seleccion == "1":
+    respuesta = update.message.text.strip().lower()
+    if respuesta == "sí":
         await update.message.reply_text(
-            "Elige otra categoría:\n\n"
+            "Selecciona la categoría:\n"
             "1. App Naranja 🍊 – Incentivos\n"
             "2. App Negra ⚫ – Incentivos\n"
             "3. App Negra ⚫ – Desglose de la tarifa del usuario"
         )
         return SELECCION_CATEGORIA
-    elif seleccion == "2":
-        await update.message.reply_text("¡Gracias por tu ayuda! Alfred ha terminado contigo. 🙌")
-        return ConversationHandler.END
-    else:
-        await update.message.reply_text("Por favor escribe 1 o 2.")
-        return SIGUE_O_NO
-
-async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("Conversación cancelada. ¡Hasta luego!")
+    await update.message.reply_text("Gracias por tu ayuda 🙌")
     return ConversationHandler.END
 
-# Función principal para Render
-async def limpiar_y_correr():
+async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("Sesión cancelada.")
+    return ConversationHandler.END
+
+# Inicialización segura
+async def run_bot():
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise ValueError("Falta la variable de entorno BOT_TOKEN")
 
     app = ApplicationBuilder().token(token).build()
 
+    # Elimina Webhook anterior por seguridad
     await app.bot.delete_webhook(drop_pending_updates=True)
 
-    conv = ConversationHandler(
+    conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             SELECCION_CIUDAD: [MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_ciudad)],
@@ -165,10 +124,10 @@ async def limpiar_y_correr():
         fallbacks=[CommandHandler("cancel", cancelar)],
     )
 
-    app.add_handler(conv)
+    app.add_handler(conv_handler)
     logging.info("✅ Alfred está corriendo en Render.")
     await app.run_polling()
 
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(limpiar_y_correr())
+# Sin uso de asyncio.run para evitar conflictos con Render
+import asyncio
+asyncio.run(run_bot())
