@@ -11,11 +11,19 @@ SELECCION_CIUDAD, VERIFICAR_CIUDAD = range(2)
 SELECCION_CATEGORIA, RECIBIR_IMAGENES, SIGUE_O_NO = range(3, 6)
 
 # Opciones
-CIUDADES = {"1": "Ciudad de México", "2": "Guadalajara", "3": "Monterrey"}
+CIUDADES = {
+    "1": "Ciudad de México",
+    "2": "Guadalajara",
+    "3": "Monterrey",
+    "4": "Puebla",
+    "5": "Chihuahua"
+}
+
 CATEGORIAS = {
     "1": "App Naranja 🍊 – Incentivos",
     "2": "App Negra ⚫ – Incentivos",
-    "3": "App Negra ⚫ – Desglose de la tarifa del usuario"
+    "3": "App Negra ⚫ – Desglose de la tarifa del usuario",
+    "4": "App Negra ⚫ – Recibos de viaje"
 }
 
 # Logging
@@ -32,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
         "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
-        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey",
+        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua",
         parse_mode="Markdown"
     )
     return SELECCION_CIUDAD
@@ -54,7 +62,8 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "Selecciona la categoría:\n"
         "1. App Naranja 🍊 – Incentivos\n"
         "2. App Negra ⚫ – Incentivos\n"
-        "3. App Negra ⚫ – Desglose de la tarifa del usuario"
+        "3. App Negra ⚫ – Desglose de la tarifa del usuario\n"
+        "4. App Negra ⚫ – Recibos de viaje"
     )
     return SELECCION_CATEGORIA
 
