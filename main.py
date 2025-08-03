@@ -77,7 +77,6 @@ async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await update.message.reply_text("Ahora envíame las capturas. Cuando termines escribe 'listo'.")
     return RECIBIR_IMAGENES
 
-
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text and update.message.text.lower() == "listo":
         await update.message.reply_text("¿Deseas subir otra categoría? (si/no)")
@@ -90,7 +89,15 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"{context.user_data['ciudad']}\n"
             f"{context.user_data['categoria']}"
         )
+
+        # Enviar al grupo principal
         await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
+
+        # Enviar al grupo extra si la categoría es 3 o 4
+        categoria_actual = context.user_data.get("categoria", "")
+        if categoria_actual.startswith("App Negra ⚫ – Desglose") or categoria_actual.startswith("App Negra ⚫ – Recibos"):
+            await context.bot.send_photo(chat_id=-1002624521213, photo=foto.file_id, caption=caption)
+
         await update.message.reply_text("📸 Imagen enviada correctamente. Puedes enviar otra o escribe Listo si ya terminaste")
     else:
         await update.message.reply_text("Envía una imagen o escribe 'listo' si ya terminaste.")
@@ -103,7 +110,8 @@ async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             "Selecciona la categoría:\n"
             "1. App Naranja 🍊 – Incentivos\n"
             "2. App Negra ⚫ – Incentivos\n"
-            "3. App Negra ⚫ – Desglose de la tarifa del usuario"
+            "3. App Negra ⚫ – Desglose de la tarifa del usuario\n"
+            "4. App Negra ⚫ – Recibos de viaje"
         )
         return SELECCION_CATEGORIA
     await update.message.reply_text("Gracias por tu ayuda 🙌")
