@@ -16,7 +16,8 @@ CIUDADES = {
     "2": "Guadalajara",
     "3": "Monterrey",
     "4": "Puebla",
-    "5": "Chihuahua"
+    "5": "Chihuahua",
+    "6": "Ciudad Juárez"
 }
 
 CATEGORIAS = {
@@ -40,7 +41,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
         "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
-        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua",
+        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez",
         parse_mode="Markdown"
     )
     return SELECCION_CIUDAD
@@ -77,6 +78,7 @@ async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await update.message.reply_text("Ahora envíame las capturas. Cuando termines escribe 'listo'.")
     return RECIBIR_IMAGENES
 
+
 async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text and update.message.text.lower() == "listo":
         await update.message.reply_text("¿Deseas subir otra categoría? (si/no)")
@@ -84,19 +86,24 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if update.message.photo:
         foto = update.message.photo[-1]
+        ciudad_actual = context.user_data.get("ciudad", "")
+        categoria_actual = context.user_data.get("categoria", "")
         caption = (
             f"{context.user_data['nombre']}\n"
-            f"{context.user_data['ciudad']}\n"
-            f"{context.user_data['categoria']}"
+            f"{ciudad_actual}\n"
+            f"{categoria_actual}"
         )
 
-        # Enviar al grupo principal
-        await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
+        if ciudad_actual == "Ciudad Juárez":
+            # Solo enviar al grupo exclusivo de Ciudad Juárez
+            await context.bot.send_photo(chat_id=-4982846000, photo=foto.file_id, caption=caption)
+        else:
+            # Enviar al grupo principal
+            await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
 
-        # Enviar al grupo extra si la categoría es 3 o 4
-        categoria_actual = context.user_data.get("categoria", "")
-        if categoria_actual.startswith("App Negra ⚫ – Desglose") or categoria_actual.startswith("App Negra ⚫ – Recibos"):
-            await context.bot.send_photo(chat_id=-1002624521213, photo=foto.file_id, caption=caption)
+            # Enviar al grupo extra si la categoría es Desglose o Recibos
+            if categoria_actual.startswith("App Negra ⚫ – Desglose") or categoria_actual.startswith("App Negra ⚫ – Recibos"):
+                await context.bot.send_photo(chat_id=-1002624521213, photo=foto.file_id, caption=caption)
 
         await update.message.reply_text("📸 Imagen enviada correctamente. Puedes enviar otra o escribe Listo si ya terminaste")
     else:
