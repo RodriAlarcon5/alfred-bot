@@ -96,7 +96,7 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if ciudad_actual == "Ciudad Juárez":
             # Solo enviar al grupo exclusivo de Ciudad Juárez
-            await context.bot.send_photo(chat_id=-4982846000, photo=foto.file_id, caption=caption)
+            await context.bot.send_photo(chat_id=-1002979170948, photo=foto.file_id, caption=caption)
         else:
             # Enviar al grupo principal
             await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
@@ -157,3 +157,4 @@ if __name__ == "__main__":
 
     logging.info("✅ Alfred está corriendo en Render (sin asyncio.run).")
     application.run_polling()
+
