@@ -17,14 +17,17 @@ CIUDADES = {
     "3": "Monterrey",
     "4": "Puebla",
     "5": "Chihuahua",
-    "6": "Ciudad Juárez"
+    "6": "Ciudad Juárez",
+    "7": "Hermosillo",
+    "8": "Saltillo"
 }
 
 CATEGORIAS = {
     "1": "App Naranja 🍊 – Incentivos",
     "2": "App Negra ⚫ – Incentivos",
     "3": "App Negra ⚫ – Desglose de la tarifa del usuario",
-    "4": "App Negra ⚫ – Recibos de viaje"
+    "4": "App Negra ⚫ – Recibos de viaje",
+    "5": "App Verde 🟢 - Incentivos"
 }
 
 # Logging
@@ -32,16 +35,17 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
-# Grupo
-GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))
-
+# Grupos
+GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))        # Grupo principal
+EXTRA_GROUP_ID = int(os.getenv("EXTRA_GROUP_ID", "-1002624521213"))  # Desglose/Recibos
+CJ_GROUP_ID = -1002979170948  # Grupo compartido para Ciudad Juárez / Saltillo / Hermosillo
 
 # Funciones del bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
         "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
-        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez",
+        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez\n7. Hermosillo\n8. Saltillo",
         parse_mode="Markdown"
     )
     return SELECCION_CIUDAD
@@ -50,7 +54,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion not in CIUDADES:
-        await update.message.reply_text("Selecciona una opción válida: 1, 2 o 3.")
+        await update.message.reply_text(f"Selecciona una opción válida: {', '.join(CIUDADES.keys())}.")
         return SELECCION_CIUDAD
     context.user_data["ciudad"] = CIUDADES[seleccion]
     await update.message.reply_text("Escribe tu número celular con el que estás registrado en la app:")
@@ -64,7 +68,8 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "1. App Naranja 🍊 – Incentivos\n"
         "2. App Negra ⚫ – Incentivos\n"
         "3. App Negra ⚫ – Desglose de la tarifa del usuario\n"
-        "4. App Negra ⚫ – Recibos de viaje"
+        "4. App Negra ⚫ – Recibos de viaje\n"
+        "5. App Verde 🟢 - Incentivos"
     )
     return SELECCION_CATEGORIA
 
@@ -72,7 +77,7 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def guardar_categoria(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     seleccion = update.message.text.strip()
     if seleccion not in CATEGORIAS:
-        await update.message.reply_text("Selecciona una opción válida: 1, 2 o 3.")
+        await update.message.reply_text(f"Selecciona una opción válida: {', '.join(CATEGORIAS.keys())}.")
         return SELECCION_CATEGORIA
     context.user_data["categoria"] = CATEGORIAS[seleccion]
     await update.message.reply_text("Ahora envíame las capturas. Cuando termines escribe 'listo'.")
@@ -94,31 +99,32 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"{categoria_actual}"
         )
 
-        if ciudad_actual == "Ciudad Juárez":
-            # Solo enviar al grupo exclusivo de Ciudad Juárez
-            await context.bot.send_photo(chat_id=-1002979170948, photo=foto.file_id, caption=caption)
+        # Ciudad Juárez, Saltillo y Hermosillo usan el MISMO grupo
+        if ciudad_actual in {"Ciudad Juárez", "Saltillo", "Hermosillo"}:
+            await context.bot.send_photo(chat_id=CJ_GROUP_ID, photo=foto.file_id, caption=caption)
         else:
             # Enviar al grupo principal
             await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
 
             # Enviar al grupo extra si la categoría es Desglose o Recibos
             if categoria_actual.startswith("App Negra ⚫ – Desglose") or categoria_actual.startswith("App Negra ⚫ – Recibos"):
-                await context.bot.send_photo(chat_id=-1002624521213, photo=foto.file_id, caption=caption)
+                await context.bot.send_photo(chat_id=EXTRA_GROUP_ID, photo=foto.file_id, caption=caption)
 
-        await update.message.reply_text("📸 Imagen enviada correctamente. Puedes enviar otra o escribe Listo si ya terminaste")
+        await update.message.reply_text("📸 Imagen enviada correctamente. Puedes enviar otra o escribe 'listo' si ya terminaste")
     else:
         await update.message.reply_text("Envía una imagen o escribe 'listo' si ya terminaste.")
     return RECIBIR_IMAGENES
 
 
 async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if update.message.text.lower() == "si":
+    if update.message.text.lower() in {"si", "sí"}:
         await update.message.reply_text(
             "Selecciona la categoría:\n"
             "1. App Naranja 🍊 – Incentivos\n"
             "2. App Negra ⚫ – Incentivos\n"
             "3. App Negra ⚫ – Desglose de la tarifa del usuario\n"
-            "4. App Negra ⚫ – Recibos de viaje"
+            "4. App Negra ⚫ – Recibos de viaje\n"
+            "5. App Verde 🟢 - Incentivos"
         )
         return SELECCION_CATEGORIA
     await update.message.reply_text("Gracias por tu ayuda 🙌")
@@ -157,4 +163,3 @@ if __name__ == "__main__":
 
     logging.info("✅ Alfred está corriendo en Render (sin asyncio.run).")
     application.run_polling()
-
