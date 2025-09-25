@@ -27,7 +27,8 @@ CATEGORIAS = {
     "2": "App Negra ⚫ – Incentivos",
     "3": "App Negra ⚫ – Desglose de la tarifa del usuario",
     "4": "App Negra ⚫ – Recibos de viaje",
-    "5": "App Verde 🟢 - Incentivos"
+    "5": "App Verde 🟢 - Incentivos",
+    "6": "App Verde 🟢 - Recibos de viaje"
 }
 
 # Logging
@@ -69,7 +70,8 @@ async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "2. App Negra ⚫ – Incentivos\n"
         "3. App Negra ⚫ – Desglose de la tarifa del usuario\n"
         "4. App Negra ⚫ – Recibos de viaje\n"
-        "5. App Verde 🟢 - Incentivos"
+        "5. App Verde 🟢 - Incentivos\n"
+        "6. App Verde 🟢 - Recibos de viaje"
     )
     return SELECCION_CATEGORIA
 
@@ -124,7 +126,8 @@ async def decidir_siguiente(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             "2. App Negra ⚫ – Incentivos\n"
             "3. App Negra ⚫ – Desglose de la tarifa del usuario\n"
             "4. App Negra ⚫ – Recibos de viaje\n"
-            "5. App Verde 🟢 - Incentivos"
+            "5. App Verde 🟢 - Incentivos\n"
+            "6. App Verde 🟢 - Recibos de viaje"
         )
         return SELECCION_CATEGORIA
     await update.message.reply_text("Gracias por tu ayuda 🙌")
