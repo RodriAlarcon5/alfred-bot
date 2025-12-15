@@ -6,6 +6,12 @@ from telegram.ext import (
     ContextTypes, filters
 )
 
+# --- Utilidad: /GroupID ---
+async def group_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    await update.message.reply_text(f"Chat type: {chat.type}\nChat ID: {chat.id}")
+# --- Fin utilidad ---
+
 # Estados de conversación
 SELECCION_CIUDAD, VERIFICAR_CIUDAD = range(2)
 SELECCION_CATEGORIA, RECIBIR_IMAGENES, SIGUE_O_NO = range(3, 6)
@@ -19,7 +25,8 @@ CIUDADES = {
     "5": "Chihuahua",
     "6": "Ciudad Juárez",
     "7": "Hermosillo",
-    "8": "Saltillo"
+    "8": "Saltillo",
+    "9": "Mérida"
 }
 
 CATEGORIAS = {
@@ -46,7 +53,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
         "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
-        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez\n7. Hermosillo\n8. Saltillo",
+        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez\n7. Hermosillo\n8. Saltillo\n9. Mérida",
         parse_mode="Markdown"
     )
     return SELECCION_CIUDAD
@@ -102,7 +109,7 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
         # Ciudad Juárez, Saltillo y Hermosillo usan el MISMO grupo
-        if ciudad_actual in {"Ciudad Juárez", "Saltillo", "Hermosillo"}:
+        if ciudad_actual in {"Ciudad Juárez", "Saltillo", "Hermosillo", "Mérida"}:
             await context.bot.send_photo(chat_id=CJ_GROUP_ID, photo=foto.file_id, caption=caption)
         else:
             # Enviar al grupo principal
@@ -146,6 +153,9 @@ if __name__ == "__main__":
         raise ValueError("Falta la variable de entorno BOT_TOKEN")
 
     application = ApplicationBuilder().token(token).build()
+
+    # Handler del comando /GroupID
+    application.add_handler(CommandHandler("GroupID", group_id))
 
     application.add_handler(
         ConversationHandler(
