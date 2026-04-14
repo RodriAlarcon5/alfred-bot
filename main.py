@@ -28,7 +28,9 @@ CIUDADES = {
     "8": "Saltillo",
     "9": "Mérida",
     "10": "Medellín",
-    "11": "Cartagena"
+    "11": "Cartagena",
+    "12": "Villahermosa",
+    "13": "Morelia"
 }
 
 CATEGORIAS = {
@@ -50,13 +52,14 @@ GROUP_ID = int(os.getenv("GROUP_ID", "-1002642749020"))        # Grupo principal
 EXTRA_GROUP_ID = int(os.getenv("EXTRA_GROUP_ID", "-1002624521213"))  # Desglose/Recibos
 CJ_GROUP_ID = -1002979170948  # Grupo compartido para Ciudad Juárez / Saltillo / Hermosillo / Mérida
 CO_GROUP_ID = -1003272190804  # Grupo compartido para Medellín / Cartagena
+VM_GROUP_ID = -1003851780405  # Grupo compartido para Villahermosa / Morelia
 
 # Funciones del bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Hola, soy *Alfred* 🤖, estaré ayudándote a recibir tus screenshots. ¡Gracias por tu tiempo! 🙌\n\n"
         "Vamos a comenzar. Por favor selecciona la *ciudad donde vives* escribiendo el número correspondiente:\n\n"
-        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez\n7. Hermosillo\n8. Saltillo\n9. Mérida\n10. Medellín\n11. Cartagena",
+        "1. Ciudad de México\n2. Guadalajara\n3. Monterrey\n4. Puebla\n5. Chihuahua\n6. Ciudad Juárez\n7. Hermosillo\n8. Saltillo\n9. Mérida\n10. Medellín\n11. Cartagena\n12. Villahermosa\n13. Morelia",
         parse_mode="Markdown"
     )
     return SELECCION_CIUDAD
@@ -118,6 +121,9 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         elif ciudad_actual in {"Medellín", "Cartagena"}:
             # Grupo de Colombia
             await context.bot.send_photo(chat_id=CO_GROUP_ID, photo=foto.file_id, caption=caption)
+        elif ciudad_actual in {"Villahermosa", "Morelia"}:
+            # Grupo compartido para Villahermosa / Morelia
+            await context.bot.send_photo(chat_id=VM_GROUP_ID, photo=foto.file_id, caption=caption)
         else:
             # Enviar al grupo principal
             await context.bot.send_photo(chat_id=GROUP_ID, photo=foto.file_id, caption=caption)
