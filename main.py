@@ -18,6 +18,7 @@ SELECCION_CATEGORIA, RECIBIR_IMAGENES, SIGUE_O_NO = range(3, 6)
 
 # Opciones
 CIUDADES = {
+    "0": "Ciudad de México Mkt Intl",
     "1": "Ciudad de México",
     "2": "Guadalajara",
     "3": "Monterrey",
@@ -53,6 +54,7 @@ EXTRA_GROUP_ID = int(os.getenv("EXTRA_GROUP_ID", "-1002624521213"))  # Desglose/
 CJ_GROUP_ID = -1002979170948  # Grupo compartido para Ciudad Juárez / Saltillo / Hermosillo / Mérida
 CO_GROUP_ID = -1003272190804  # Grupo compartido para Medellín / Cartagena
 VM_GROUP_ID = -1003851780405  # Grupo compartido para Villahermosa / Morelia
+INTERNAL_GROUP_ID = -5012598605  # Grupo interno para Ciudad de México Mkt Intl
 
 # Funciones del bot
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -70,13 +72,25 @@ async def guardar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if seleccion not in CIUDADES:
         await update.message.reply_text(f"Selecciona una opción válida: {', '.join(CIUDADES.keys())}.")
         return SELECCION_CIUDAD
+
     context.user_data["ciudad"] = CIUDADES[seleccion]
-    await update.message.reply_text("Escribe tu número celular con el que estás registrado en la app:")
+
+    if seleccion == "0":
+        await update.message.reply_text("Escribe tu nombre con apellido:")
+    else:
+        await update.message.reply_text("Escribe tu número celular con el que estás registrado en la app:")
+
     return VERIFICAR_CIUDAD
 
 
 async def verificar_ciudad(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data["nombre"] = update.message.text.strip()
+    ciudad_actual = context.user_data.get("ciudad", "")
+
+    if ciudad_actual == "Ciudad de México Mkt Intl":
+        context.user_data["nombre"] = str(update.message.text).strip().upper()
+    else:
+        context.user_data["nombre"] = update.message.text.strip()
+
     await update.message.reply_text(
         "Selecciona la categoría:\n"
         "1. App Naranja 🍊 – Incentivos\n"
@@ -115,7 +129,10 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
         # Enrutamiento por ciudad
-        if ciudad_actual in {"Ciudad Juárez", "Saltillo", "Hermosillo", "Mérida"}:
+        if ciudad_actual == "Ciudad de México Mkt Intl":
+            # Grupo interno
+            await context.bot.send_photo(chat_id=INTERNAL_GROUP_ID, photo=foto.file_id, caption=caption)
+        elif ciudad_actual in {"Ciudad Juárez", "Saltillo", "Hermosillo", "Mérida"}:
             # Grupo de CJ (México norte + Mérida)
             await context.bot.send_photo(chat_id=CJ_GROUP_ID, photo=foto.file_id, caption=caption)
         elif ciudad_actual in {"Medellín", "Cartagena"}:
