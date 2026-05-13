@@ -132,7 +132,7 @@ async def recibir_imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if ciudad_actual == "Ciudad de México Mkt Intl":
             # Grupo interno
             await context.bot.send_photo(chat_id=INTERNAL_GROUP_ID, photo=foto.file_id, caption=caption)
-        elif ciudad_actual in {"Ciudad Juárez", "Saltillo", "Hermosillo", "Mérida"}:
+        elif ciudad_actual in {"Saltillo", "Hermosillo", "Mérida"}:
             # Grupo de CJ (México norte + Mérida)
             await context.bot.send_photo(chat_id=CJ_GROUP_ID, photo=foto.file_id, caption=caption)
         elif ciudad_actual in {"Medellín", "Cartagena"}:
